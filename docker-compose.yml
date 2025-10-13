@@ -1,0 +1,41 @@
+services:
+  # Dịch vụ 1: Ứng dụng Web Java
+  web-app:
+    build:
+      context: .
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql-db:3306/securing_web?allowPublicKeyRetrieval=true&useSSL=false
+      SPRING_DATASOURCE_USERNAME: user
+      SPRING_DATASOURCE_PASSWORD: abc123 # ĐÃ SỬA: Đồng bộ hóa mật khẩu user
+    depends_on:
+      mysql-db:
+        condition: service_healthy
+
+  # Dịch vụ 2: MySQL Database
+  mysql-db:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: abc123 # Mật khẩu Root
+      MYSQL_DATABASE: securing_web
+      MYSQL_USER: user
+      MYSQL_PASSWORD: abc123 # Mật khẩu user
+    ports:
+      - "3306:3306"
+
+    # SỬA LỖI HEALTHCHECK: Sử dụng biến môi trường $$MYSQL_ROOT_PASSWORD
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "--password=$$MYSQL_ROOT_PASSWORD"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
+
+volumes:
+  mysql_data:
+    driver: local
